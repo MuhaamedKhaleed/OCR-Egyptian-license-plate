@@ -29,3 +29,9 @@
 ### Synthetic demonstration follow-up
 
 Added standalone invented-input backend demo, checked JSON output and documented limits. Opt-in ML container added where a model backend exists; default lightweight image unchanged. Hosted container verification is required separately.
+
+## Portable local notebook follow-up
+
+- Replace platform-specific notebook execution with local opt-in CPU training/inference and a safe default decoder run.
+- Add local training guards and notebook execution regressions; document actual one-epoch random-weight/rectangle smoke with zero quality claim.
+- Correct stale credential/license/cache documentation, preserve inherited-rights caveats, and pin Node 24 checkout/cache releases.
