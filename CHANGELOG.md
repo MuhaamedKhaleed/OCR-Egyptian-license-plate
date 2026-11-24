@@ -4,14 +4,19 @@
 
 ### Added
 - Local single-plate inference adapter, pure decoder and Typer JSON CLI.
+- Opt-in per-plate auto-crop mode, with empty-list behavior when no plate is found.
 - Offline regression tests, dotenv configuration helper, pinned dependencies and local quality hooks.
-- Setup, evaluation limits and verification documentation.
+- Setup, annotation audit, bounded evaluation and verification documentation.
 
 ### Fixed
 - Final notebook prediction uses the current image rather than a previous prediction.
+- Suppress near-identical character boxes by confidence, with synthetic regression tests.
+- Correct reviewed Arabic aliases from original training annotations, including hamza and missing dad/zay mappings.
+
+### Verified
+- Original-checkpoint CPU inference without retraining.
+- Frozen next-slice evaluation records 7/10 exact primary-plate reads, with failures and limitations, not general accuracy.
 
 ### Security
 - Notebook credential moved to the environment and saved outputs cleared. This does not revoke the old credential or remove its history.
-
-- Suppress near-identical character boxes by confidence, with synthetic regression tests.
-- Verified original-checkpoint CPU inference; documented external-sample failures without publishing images or weights.
+- No sample images, annotation cache or model weights published.
