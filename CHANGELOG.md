@@ -20,3 +20,8 @@
 ### Security
 - Notebook credential moved to the environment and saved outputs cleared. This does not revoke the old credential or remove its history.
 - No sample images, annotation cache or model weights published.
+
+
+### Engineering follow-up
+- Use the committed uv lock in CI and key dependency-installer caching by that lock.
+- Complete copy-only profile README drafts and clarify historical versus current verification.
