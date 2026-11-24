@@ -12,3 +12,6 @@
 
 ### Security
 - Notebook credential moved to the environment and saved outputs cleared. This does not revoke the old credential or remove its history.
+
+- Suppress near-identical character boxes by confidence, with synthetic regression tests.
+- Verified original-checkpoint CPU inference; documented external-sample failures without publishing images or weights.
