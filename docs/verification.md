@@ -7,7 +7,7 @@ Verified locally on Python 3.11.18. Initial checks used no training or real weig
 - `uv sync --locked --extra dev`: passed.
 - `python -m egypt_plate_ocr --help`: passed.
 - `egypt-plate-ocr --help`: passed with required image and weights options.
-- `python -m pytest --cov=egypt_plate_ocr --cov-report=term-missing`: 20 passed, 87% package statement coverage. This is software coverage, not OCR accuracy. Tests use temporary local files and fake models, not a network service.
+- `python -m pytest --cov=egypt_plate_ocr --cov-report=term-missing`: 24 passed, 86% package statement coverage. This is software coverage, not OCR accuracy. Tests use temporary local files and fake models, not a network service.
 - `python -m ruff check src tests`: passed.
 - `python -m ruff format --check src tests`: passed.
 - `python -m mypy src`: passed with typed definitions required and untyped bodies checked.
@@ -23,7 +23,7 @@ Typer 0.15.2 initially failed against the automatically selected Click 8.5.1. Pi
 3. Errors/logging: CLI configures logging once, JSON stays on stdout, input/model errors exit 2. Notebook's exploratory prints remain. No real model error behavior verified.
 4. Configuration: dotenv helper and key failure tests added, `.env.example` documents key. Notebook uses its environment directly, not the helper. Old history still contains a credential and must be handled separately.
 5. Dependencies: runtime/inference/dev extras separated, uv lock present. Fresh editable install and help verified. Optional Ultralytics 8.3.0 loaded the recovered checkpoint (created with 8.3.105) and ran CPU predictions using Torch 2.4.1+cpu.
-6. Tests: 20 pass, 87% statement coverage. Tests exercise decoding/order, finite coordinates, missing files/config, CLI required options, clean external failure and per-image prediction calls. Missing coverage includes the real Ultralytics import path and some entry-point/error branches.
+6. Tests: 24 pass, 86% statement coverage. Tests exercise decoding/order, finite coordinates, missing files/config, CLI required options, clean external failure and per-image prediction calls. Missing coverage includes the real Ultralytics import path and some entry-point/error branches.
 7. Quality: Ruff, configured mypy and local pre-commit hooks pass. Old notebook is not included in the package lint scope.
 8. CI: added on push and pull request using standard ubuntu-24.04 with a public-repository-only job guard. No cache, uploaded artifact or image publication. Live results are recorded below.
 9. Docker: local executable unavailable; CI builds the multi-stage slim image, runs CLI help, confirms non-root UID 10001 and checks invalid input exits 2. The image excludes the optional ML runtime and weights. This is a CLI smoke image, not real inference validation.
@@ -34,7 +34,7 @@ Typer 0.15.2 initially failed against the automatically selected Click 8.5.1. Pi
 
 ## Assumptions and original problems
 
-One plate crop, original mapping/order preserved, unknown labels ignored. Mapping aliases require dataset review. The final notebook cell reused the previous image's results, an exposed key was embedded, outputs made the notebook large, and reusable logic had no tests. The prediction correction is committed separately from package extraction.
+Default mode expects one plate crop; opt-in auto-crop isolates detected plates. Original right-to-left order is preserved and unknown labels are ignored. Ambiguous mapping aliases were reviewed against original annotations; the whole mapping is not certified. The final notebook cell reused the previous image's results, an exposed key was embedded, outputs made the notebook large, and reusable logic had no tests. The prediction correction is committed separately from package extraction.
 
 ## Remaining manual/blocked work
 
@@ -46,4 +46,9 @@ Run https://github.com/MuhaamedKhaleed/OCR-Egyptian-license-plate/actions/runs/4
 
 ## Inference follow-up
 
-Recovered the original saved checkpoint without rerunning training. CPU model load, a blank-image smoke test and image predictions passed. Near-identical overlapping character boxes are suppressed by confidence before decoding; synthetic regression tests cover duplicate and adjacent boxes. Arabic aliases, missing classes and multi-plate grouping remain limitations. External evaluation details are in `evaluation.md`.
+Recovered the original saved checkpoint without rerunning training. CPU model load, a blank-image smoke test and image predictions passed. Near-identical overlapping character boxes are suppressed by confidence before decoding; synthetic regression tests cover duplicate and adjacent boxes. Ambiguous Arabic aliases were subsequently audited against original training annotations. Opt-in per-plate crops avoid mixing separate plate characters. Remaining missing/confused letters and duplicate digits are documented, not hidden by post-hoc substitutions. External evaluation details are in `evaluation.md`.
+
+
+## Mapping and auto-crop follow-up
+
+24 offline tests pass with 86% statement coverage; Ruff, mypy and all local pre-commit hooks pass. New synthetic checks cover multiple plate isolation, empty detection and invalid paths/confidence. The original checkpoint also ran actual CPU inference with the corrected mapping and opt-in crop path. This does not turn synthetic test coverage into recognition accuracy. See `evaluation.md` for the frozen next-slice 7/10 primary-plate result and unresolved failures. Hosted CI at the latest branch head must be checked separately from the earlier run linked above.
