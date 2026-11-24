@@ -1,3 +1,15 @@
+# Current status, 24 November 2026
+
+This section supersedes stale descriptions in the historical execution log below. The notebook is now a portable opt-in local workflow, not the old Kaggle experiment. Default notebook code cells executed in order under a regression test, with no training or image load. The old plotting cells were replaced, not reproduced. Explicit local CPU training uses trusted weights/data and a new output destination.
+
+Local verification: 36 tests passed with 87% package statement coverage, Ruff lint/format, mypy and hooks. A separate actual one-epoch CPU run used the installed YOLOv8n architecture, freshly generated random local weights and four invented 64px rectangle images. It trained, validated and saved best/last checkpoints with Python socket connection attempts disabled. Validation detection scores were zero. This is training-path wiring evidence, not recognition quality or independent evaluation. No weights/images were committed. The factory unit test verifies CPU/batch/worker/pretrained arguments; it is separate from that actual local run.
+
+The notebook and ML adapter still need a permitted real dataset, trusted compatible checkpoint and independent assessment for useful model claims. The new notebook no longer installs or calls Roboflow, downloads default weights, assumes GPU, exports automatically, or uses hard-coded Kaggle paths. The unused config helper is preserved for compatibility. The exposed key is third-party and was not used/revoked; historical cleanup is unchanged.
+
+Pinned Node 24 checkout/cache actions replace the successful but warning-producing Node 20 pins. Official releases require runner >=2.327.1; this workflow uses GitHub-hosted ubuntu-24.04, not self-hosted runners. Hosted verification is pending publication; earlier successful runs do not validate this changed head.
+
+## Historical execution log, superseded where noted above
+
 # Verification record
 
 Verified locally on Python 3.11.18. Initial checks used no training or real weights. A later CPU follow-up loaded the original saved checkpoint and ran image predictions, with no training, paid API or GPU. The follow-up CI uses a free standard public-repository runner.
