@@ -2,7 +2,7 @@
 
 A YOLO training notebook with a small local-inference package for decoding Egyptian plate character detections. This pilot separates reusable decoding from notebook experiments and fixes reuse of a previous image's prediction.
 
-**Status:** tested package and CPU inference using the original saved checkpoint, not a verified production parking system. Weights are not included. Arabic mapping errors remain; retraining, hardware deployment, Firebase and a mobile app have not been verified here.
+**Status:** tested package and CPU inference using the original saved checkpoint, not a verified production parking system. Weights are not included. Reviewed Arabic aliases are corrected, but recognition errors remain; retraining, hardware deployment, Firebase and a mobile app have not been verified here.
 
 ## Quick start
 
@@ -36,10 +36,18 @@ Both paths must exist. Weights are loaded only when inference is requested. Do n
 Output is UTF-8 JSON with `letters` and `numbers`. An **offline decoder test**, not a model prediction, yields:
 
 ```json
-{"letters": "ا ب", "numbers": "٣ ١"}
+{"letters": "أ ب", "numbers": "٣ ١"}
 ```
 
-The original class mapping and right-to-left ordering are preserved. Near-identical character boxes (IoU at least 0.8) are reduced to the strongest detection before decoding. Unknown classes are ignored. This decoder assumes a single plate crop; it does not group multiple plates or establish legal plate validity. Mapping aliases and digit order still require review against the actual dataset.
+The original right-to-left ordering is preserved. Arabic aliases were reviewed against the original saved training annotations and matching character crops, not inferred from their English spellings. Near-identical character boxes (IoU at least 0.8) are reduced to the strongest detection. Unknown classes are ignored. Single-crop mode does not group plates or establish legal plate validity.
+
+For a full vehicle image, opt in to separate localization and recognition:
+
+```sh
+egypt-plate-ocr --image path/to/car.jpg --weights path/to/best.pt --confidence 0.2 --auto-crop
+```
+
+Auto-crop mode detects `License Plate` boxes, adds a fixed small margin, and predicts each crop independently. It returns a JSON list with `box` (pixel xyxy), detector `confidence`, `letters` and `numbers` for each plate. No detected plate returns `[]`, with no full-frame fallback. Every detected plate is returned, including possible false positives. Confidence is the plate detector score, not a probability that its text is correct.
 
 ## Configuration
 
@@ -72,7 +80,7 @@ A credential was previously committed. The current notebook reads `ROBOFLOW_API_
 
 1. Confirm the author's contribution and how this component fits the graduation parking system.
 2. Review model/code redistribution rights; recovered compatible weights remain outside this repository.
-3. Correct and review Arabic aliases, improve plate grouping, and evaluate a genuinely held-out plate-level set.
+3. Extend the annotation-grounded mapping audit, investigate missing/confused characters, and evaluate a genuinely held-out plate-level set.
 4. Make training paths configurable and validate the actual hardware/deployment stack before describing this as production-ready.
 
 No hosted demo or release tag is claimed. CI uses a standard Ubuntu runner only while this repository is public, with no uploaded artifacts, dependency cache or image publishing. If the repository becomes private, its job is skipped. See `docs/verification.md` for results and limits.
