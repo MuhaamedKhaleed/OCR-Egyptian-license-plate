@@ -11,10 +11,32 @@ from types import SimpleNamespace
 
 from egypt_plate_ocr.cli import main
 from egypt_plate_ocr.core import Detection, decode_characters
-from egypt_plate_ocr.inference import predict_plate
+from egypt_plate_ocr.inference import _unique_characters, predict_plate
 
 
 class CoreTests(unittest.TestCase):
+    def test_duplicate_character_boxes_keep_confident_label(self):
+        candidates = [
+            ("alf", [100, 10, 120, 50], 0.30),
+            ("alef", [100, 10, 120, 50], 0.41),
+            ("haa", [65, 10, 85, 50], 0.78),
+        ]
+        self.assertEqual(
+            decode_characters(_unique_characters(candidates)),
+            {"letters": "ا ه", "numbers": ""},
+        )
+
+    def test_adjacent_and_nonoverlapping_characters_stay(self):
+        candidates = [
+            ("baa", [10, 10, 30, 50], 0.9),
+            ("baa", [25, 10, 45, 50], 0.8),
+            ("1", [60, 10, 70, 50], 0.7),
+        ]
+        self.assertEqual(len(_unique_characters(candidates)), 3)
+
+    def test_zero_area_boxes_do_not_divide_by_zero(self):
+        self.assertEqual(len(_unique_characters([("baa", [0, 0, 0, 0], 0.5)])), 1)
+
     def test_empty(self):
         self.assertEqual(decode_characters([]), {"letters": "", "numbers": ""})
 
@@ -105,7 +127,8 @@ class CoreTests(unittest.TestCase):
                 calls.append(kwargs)
                 return [
                     SimpleNamespace(
-                        boxes=[SimpleNamespace(cls=Scalar(), xyxy=[Coords()])], names={0: "baa"}
+                        boxes=[SimpleNamespace(cls=Scalar(), conf=Scalar(), xyxy=[Coords()])],
+                        names={0: "baa"},
                     )
                 ]
 
