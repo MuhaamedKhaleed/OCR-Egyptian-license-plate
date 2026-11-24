@@ -23,7 +23,7 @@ class CoreTests(unittest.TestCase):
         ]
         self.assertEqual(
             decode_characters(_unique_characters(candidates)),
-            {"letters": "ا ه", "numbers": ""},
+            {"letters": "أ ه", "numbers": ""},
         )
 
     def test_adjacent_and_nonoverlapping_characters_stay(self):
@@ -37,6 +37,24 @@ class CoreTests(unittest.TestCase):
     def test_zero_area_boxes_do_not_divide_by_zero(self):
         self.assertEqual(len(_unique_characters([("baa", [0, 0, 0, 0], 0.5)])), 1)
 
+    def test_audited_dataset_aliases(self):
+        expected = {
+            "aain": "ع",
+            "e": "ع",
+            "alef": "أ",
+            "alf": "أ",
+            "daal": "د",
+            "dal": "د",
+            "dad": "ض",
+            "taa": "ط",
+            "waaw": "و",
+            "waw": "و",
+            "zay": "ز",
+        }
+        for label, letter in expected.items():
+            with self.subTest(label=label):
+                self.assertEqual(decode_characters([Detection(label, 10)])["letters"], letter)
+
     def test_empty(self):
         self.assertEqual(decode_characters([]), {"letters": "", "numbers": ""})
 
@@ -48,7 +66,7 @@ class CoreTests(unittest.TestCase):
             Detection("1", 20),
             Detection("plate", 50),
         ]
-        self.assertEqual(decode_characters(chars), {"letters": "ا ب", "numbers": "٣ ١"})
+        self.assertEqual(decode_characters(chars), {"letters": "أ ب", "numbers": "٣ ١"})
 
     def test_unknown(self):
         self.assertEqual(decode_characters([Detection("unknown", 1)])["letters"], "")
