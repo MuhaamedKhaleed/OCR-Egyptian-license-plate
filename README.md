@@ -49,9 +49,13 @@ egypt-plate-ocr --image path/to/car.jpg --weights path/to/best.pt --confidence 0
 
 Auto-crop mode detects `License Plate` boxes, adds a fixed small margin, and predicts each crop independently. It returns a JSON list with `box` (pixel xyxy), detector `confidence`, `letters` and `numbers` for each plate. No detected plate returns `[]`, with no full-frame fallback. Every detected plate is returned, including possible false positives. Confidence is the plate detector score, not a probability that its text is correct.
 
-## Configuration
+## Configuration and portable notebook
 
-Local inference requires no key. The optional `roboflow_key(Path(".env"))` helper loads an explicit dotenv file without overriding environment values and raises a clear error when `ROBOFLOW_API_KEY` is missing. It is not called during local inference. The original notebook still uses the environment directly.
+`model-ocr.ipynb` is now a local, opt-in workflow using the reviewed package. Its default execution runs only an invented decoder example and skips training/image inference. It has no install/download cells, Roboflow calls, Kaggle paths or GPU assumption. Install `uv sync --locked --extra inference --extra dev` before opening it from the repository root.
+
+For deliberate CPU training, set `OCR_RUN_TRAINING=1`, `OCR_DATA_YAML`, `OCR_BASE_WEIGHTS` and a new `OCR_TRAIN_OUTPUT`. `OCR_EPOCHS` defaults to 1. The adapter rejects remote split URLs, download directives, missing directories, identical train/validation directories and output overwrite. It does not certify annotation correctness, image-level disjointness or rights. YAML split lists/text manifests are not supported by this first local adapter. Initial weights must already exist locally. For optional prediction set both `OCR_IMAGE` and `OCR_WEIGHTS`. Use a network-disabled environment when strict offline enforcement is required.
+
+The unused `roboflow_key` function remains only as a backward-compatible config helper, not as a dependency of this workflow. It is not called by the package or notebook. No new credential is needed or requested.
 
 ## Architecture
 
@@ -64,26 +68,29 @@ CLI arguments -> local path validation -> YOLO adapter -> character detections
 - `src/egypt_plate_ocr/inference.py`: explicit image/weights loading and per-image prediction.
 - `src/egypt_plate_ocr/cli.py`: arguments, JSON output and nonzero errors.
 - `tests/`: offline tests with a fake model; no claims about ML accuracy.
-- `model-ocr.ipynb`: original experimental training workflow with outputs cleared, key externalized and final prediction corrected. Kaggle paths remain; it is **not** a portable training pipeline yet.
+- `training.py`: explicit local-weights CPU adapter with input/output guards.
+- `model-ocr.ipynb`: local opt-in workflow; the old exploratory visualization sequence is replaced, not claimed reproduced.
 
 ## Evaluation and limits
 
 The pre-cleanup notebook stored validation results on 341 images: mAP@0.5 approximately 0.886 and mAP@0.5:0.95 approximately 0.543. These were **not rerun** in this pilot. They are detection metrics, not full-plate exact-match recognition accuracy. No 94% recognition claim is established by this work. See `docs/evaluation.md` for the evidence needed next.
 
-No default license has been added. Confirm rights for the original code, dataset and trained weights before redistribution or deployment. The original Roboflow project displays CC BY 4.0; model and code obligations must still be reviewed separately. No model redistribution is implied.
+The new owned engineering code has a scoped MIT license, not a license grant over inherited code, data, dependencies or models. Confirm their rights before redistribution or deployment. The original Roboflow project displays CC BY 4.0; model and code obligations must still be reviewed separately. No model redistribution is implied.
 
 ## Security
 
-A credential was previously committed. The current notebook reads `ROBOFLOW_API_KEY` from the environment and contains no saved outputs. This **does not revoke the old key or erase git history**. Revoke the exposed key at the provider and handle history cleanup separately with coordination for any collaborators. Do not put a replacement key in a notebook or commit `.env`.
+A credential was previously committed and the owner clarified it was copied from a third party. It was neither used nor revoked during this work. The current notebook has no credential call or saved outputs. Git history/main and external Kaggle copies are unchanged; cleanup remains a separately coordinated step. Never put a replacement key in this repository.
+
+Ultralytics 8.3.0 is AGPL-3.0 software. Its vendor also states model-related licensing conditions. The package's scoped MIT notice does not override those conditions or grant rights to recovered weights. No paid license was purchased and no private/commercial deployment is approved. See `docs/provenance.md`.
 
 ## Next steps
 
 1. Confirm the author's contribution and how this component fits the graduation parking system.
 2. Review model/code redistribution rights; recovered compatible weights remain outside this repository.
 3. Extend the annotation-grounded mapping audit, investigate missing/confused characters, and evaluate a genuinely held-out plate-level set.
-4. Make training paths configurable and validate the actual hardware/deployment stack before describing this as production-ready.
+4. Validate real dataset annotations, independent splits and the actual hardware/deployment stack. Local path portability is now implemented but original full-scale results are not reproduced.
 
-No hosted demo or release tag is claimed. CI uses a standard Ubuntu runner only while this repository is public, with no uploaded artifacts, dependency cache or image publishing. If the repository becomes private, its job is skipped. See `docs/verification.md` for results and limits.
+No hosted demo or release tag is claimed. CI uses a standard Ubuntu runner only while this repository is public, with no uploaded artifacts or image publishing. Download caching is keyed by uv.lock. If the repository becomes private, its job is skipped. See `docs/verification.md` for results and limits.
 
 ## Demo
 
