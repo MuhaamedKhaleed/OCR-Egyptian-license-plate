@@ -52,3 +52,10 @@ Recovered the original saved checkpoint without rerunning training. CPU model lo
 ## Mapping and auto-crop follow-up
 
 24 offline tests pass with 86% statement coverage; Ruff, mypy and all local pre-commit hooks pass. New synthetic checks cover multiple plate isolation, empty detection and invalid paths/confidence. The original checkpoint also ran actual CPU inference with the corrected mapping and opt-in crop path. This does not turn synthetic test coverage into recognition accuracy. See `evaluation.md` for the frozen next-slice 7/10 primary-plate result and unresolved failures. Hosted CI at the latest branch head must be checked separately from the earlier run linked above.
+
+
+## Gap-closure follow-up (24 November 2026)
+
+The CI source now uses uv 0.13.8 and the committed transitive lock, rather than a new pip resolution of direct pins. Dependency installer caching is keyed by uv.lock. The local matching command is `uv sync --locked --extra dev`, followed by the existing tests/quality commands. This does not cache or publish private datasets, weights or model outputs. Public-repository-only guards remain. The changed workflow's hosted outcome must be checked after publication; prior green runs do not validate a changed workflow.
+
+A complete copy-only project-focused profile README draft is appended to presentation.md. No profile account edits, main merge, PR, release or license change is implied by that text. Historical notebook/full-data/quality limitations remain open, not replaced by a passing synthetic test.
