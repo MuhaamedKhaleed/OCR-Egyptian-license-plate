@@ -47,3 +47,7 @@ Use the same output path for the three ordered stages. Each stage refuses existi
   "limits": "Development only80train16dev from related captures, same reused dev selection. Not scene-independent or text OCR. Source DbCL/ODbL and Ultralytics terms separate. No raw plates or weights redistribution."
 }
 ```
+
+## Frozen-model additional check
+
+After fixing the refined checkpoint, evaluated the first32 sorted previously unused annotated original images (41plates), excluding the96selected filenames and exact-pixel hashes. No training or tuning on these32. mAP50 .73694, mAP50-95 .38952, precision .81268, recall .63415. These are new images to this experiment, but still related captures from the same original collection, not a scene-disjoint or external benchmark. Once inspected, this additional set is exposed and must not be called an untouched test for future work.
