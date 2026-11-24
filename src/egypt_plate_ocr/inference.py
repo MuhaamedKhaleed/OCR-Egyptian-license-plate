@@ -65,3 +65,61 @@ def predict_plate(
         coords = [float(value) for value in box.xyxy[0].tolist()]
         candidates.append((label, coords, float(box.conf.item())))
     return decode_characters(_unique_characters(candidates))
+
+
+def predict_plates(
+    image: Path, weights: Path, confidence: float = 0.2, *, model_factory: Any = None
+) -> list[dict[str, Any]]:
+    """Localize plates, then decode each crop independently.
+
+    Returns no entries when no plate is detected. It never mixes characters
+    across plates or silently falls back to whole-frame decoding.
+    """
+    if not 0 <= confidence <= 1:
+        raise ValueError("Confidence must be between 0 and 1.")
+    if not image.is_file() or not weights.is_file():
+        raise ValueError("Image and trusted weights must both be existing files.")
+    if model_factory is None:
+        try:
+            from ultralytics import YOLO
+        except ImportError as exc:
+            raise ValueError('Install the inference extra: pip install -e ".[inference]"') from exc
+        model_factory = YOLO
+    model = model_factory(str(weights.resolve()))
+    frames = model.predict(source=str(image.resolve()), conf=confidence, verbose=False)
+    if not frames:
+        return []
+    frame = frames[0]
+    height, width = frame.orig_img.shape[:2]
+    output = []
+    for box in frame.boxes:
+        if frame.names[int(box.cls.item())] != "License Plate":
+            continue
+        x1, y1, x2, y2 = [float(v) for v in box.xyxy[0].tolist()]
+        bounds = [
+            max(0, int(x1) - 3),
+            max(0, int(y1) - 3),
+            min(width, int(x2) + 4),
+            min(height, int(y2) + 4),
+        ]
+        left, top, right, bottom = bounds
+        if right <= left or bottom <= top:
+            continue
+        crop = frame.orig_img[top:bottom, left:right]
+        results = model.predict(source=crop, conf=confidence, verbose=False)
+        candidates = []
+        if results:
+            result = results[0]
+            for char in result.boxes:
+                label = result.names[int(char.cls.item())]
+                if label in ARABIC_MAPPING:
+                    coords = [float(v) for v in char.xyxy[0].tolist()]
+                    candidates.append((label, coords, float(char.conf.item())))
+        output.append(
+            {
+                "box": bounds,
+                "confidence": float(box.conf.item()),
+                **decode_characters(_unique_characters(candidates)),
+            }
+        )
+    return output
