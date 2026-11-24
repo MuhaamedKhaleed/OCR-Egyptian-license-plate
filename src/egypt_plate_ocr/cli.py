@@ -8,7 +8,7 @@ import typer
 from click.exceptions import Exit
 from typer.main import get_command
 
-from .inference import predict_plate
+from .inference import predict_plate, predict_plates
 
 app = typer.Typer(add_completion=False, pretty_exceptions_enable=False)
 log = logging.getLogger(__name__)
@@ -19,11 +19,16 @@ def predict(
     image: Path = typer.Option(..., help="Local image of one plate crop."),
     weights: Path = typer.Option(..., help="Trusted compatible local YOLO weights."),
     confidence: float = typer.Option(0.2, help="Detection confidence between 0 and 1."),
+    auto_crop: bool = typer.Option(False, help="Find and decode each plate independently."),
 ) -> None:
     """Decode one local plate image. No weights are downloaded by this wrapper."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
-        result = predict_plate(image, weights, confidence)
+        result = (
+            predict_plates(image, weights, confidence)
+            if auto_crop
+            else predict_plate(image, weights, confidence)
+        )
     except (ValueError, OSError, RuntimeError) as exc:
         log.error("%s", exc)
         typer.echo(f"Error: {exc}", err=True)
