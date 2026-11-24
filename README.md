@@ -2,7 +2,7 @@
 
 A YOLO training notebook with a small local-inference package for decoding Egyptian plate character detections. This pilot separates reusable decoding from notebook experiments and fixes reuse of a previous image's prediction.
 
-**Status:** offline unit-tested inference plumbing, not a verified production parking system. Compatible trained weights are not included. Real model inference, retraining, hardware deployment, Firebase and a mobile app have not been verified here.
+**Status:** tested package and CPU inference using the original saved checkpoint, not a verified production parking system. Weights are not included. Arabic mapping errors remain; retraining, hardware deployment, Firebase and a mobile app have not been verified here.
 
 ## Quick start
 
@@ -22,9 +22,9 @@ python -m pre_commit run --all-files
 
 The package, help, and offline tests need no API keys, model download, paid service or GPU. Initial dependency installation requires internet access. Development dependency versions are in `pyproject.toml`; `uv.lock` records resolution. With uv installed, `uv sync --locked --extra dev` is an alternative.
 
-## Real inference (not yet validated with project weights)
+## Local inference
 
-The following is an intended usage path, not a claim of successful model execution. Install the optional inference dependency, obtain **trusted, compatible local trained weights**, and provide one plate crop:
+CPU loading and image prediction were verified with the original saved checkpoint. This does not establish OCR accuracy. Install the optional inference dependency, obtain **trusted, compatible local trained weights**, and provide one plate crop:
 
 ```sh
 python -m pip install -e '.[inference]'
@@ -39,7 +39,7 @@ Output is UTF-8 JSON with `letters` and `numbers`. An **offline decoder test**, 
 {"letters": "ا ب", "numbers": "٣ ١"}
 ```
 
-The original class mapping and right-to-left ordering are preserved. Unknown classes are ignored. This decoder assumes a single plate crop; it does not group multiple plates or establish legal plate validity. Mapping aliases and digit order still require review against the actual dataset.
+The original class mapping and right-to-left ordering are preserved. Near-identical character boxes (IoU at least 0.8) are reduced to the strongest detection before decoding. Unknown classes are ignored. This decoder assumes a single plate crop; it does not group multiple plates or establish legal plate validity. Mapping aliases and digit order still require review against the actual dataset.
 
 ## Configuration
 
@@ -62,7 +62,7 @@ CLI arguments -> local path validation -> YOLO adapter -> character detections
 
 The pre-cleanup notebook stored validation results on 341 images: mAP@0.5 approximately 0.886 and mAP@0.5:0.95 approximately 0.543. These were **not rerun** in this pilot. They are detection metrics, not full-plate exact-match recognition accuracy. No 94% recognition claim is established by this work. See `docs/evaluation.md` for the evidence needed next.
 
-No default license has been added. Confirm rights for the original code, dataset and trained weights before redistribution or deployment. The dataset's provenance is referenced in the notebook, but its license and redistribution terms have not been verified here.
+No default license has been added. Confirm rights for the original code, dataset and trained weights before redistribution or deployment. The original Roboflow project displays CC BY 4.0; model and code obligations must still be reviewed separately. No model redistribution is implied.
 
 ## Security
 
@@ -71,15 +71,15 @@ A credential was previously committed. The current notebook reads `ROBOFLOW_API_
 ## Next steps
 
 1. Confirm the author's contribution and how this component fits the graduation parking system.
-2. Verify dataset/model rights and provide compatible weights through a safe route.
-3. Run real inference, record expected outputs and failure examples, and test a held-out plate-level set.
+2. Review model/code redistribution rights; recovered compatible weights remain outside this repository.
+3. Correct and review Arabic aliases, improve plate grouping, and evaluate a genuinely held-out plate-level set.
 4. Make training paths configurable and validate the actual hardware/deployment stack before describing this as production-ready.
 
 No hosted demo or release tag is claimed. CI uses a standard Ubuntu runner only while this repository is public, with no uploaded artifacts, dependency cache or image publishing. If the repository becomes private, its job is skipped. See `docs/verification.md` for results and limits.
 
 ## Demo
 
-A real-model screenshot or recording is not available yet. Add one only after validating compatible weights on representative plate images. The JSON example above is decoder output, not a real image prediction.
+Real CPU predictions have been checked, but no private image or model has been published. The JSON example above is decoder output, not a real image prediction. See `docs/evaluation.md` for the bounded external test and its failures.
 
 ## Verification status
 
