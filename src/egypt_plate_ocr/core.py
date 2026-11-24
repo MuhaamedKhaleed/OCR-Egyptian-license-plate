@@ -4,12 +4,13 @@ from dataclasses import dataclass
 from math import isfinite
 
 ARABIC_MAPPING = {
-    "aain": "أ",
-    "alef": "ا",
-    "alf": "ألف",
+    "aain": "ع",
+    "alef": "أ",
+    "alf": "أ",
     "baa": "ب",
     "daal": "د",
-    "dal": "ذ",
+    "dad": "ض",
+    "dal": "د",
     "e": "ع",
     "faa": "ف",
     "geem": "ج",
@@ -22,10 +23,11 @@ ARABIC_MAPPING = {
     "raa": "ر",
     "sad": "ص",
     "seen": "س",
-    "taa": "ت",
+    "taa": "ط",
     "waaw": "و",
-    "waw": "ؤ",
+    "waw": "و",
     "yaa": "ي",
+    "zay": "ز",
     **dict(zip("0123456789", "٠١٢٣٤٥٦٧٨٩", strict=True)),
 }
 
@@ -43,10 +45,10 @@ class Detection:
 
 
 def decode_characters(detections: list[Detection]) -> dict[str, str]:
-    """Apply the original notebook mapping and right-to-left ordering.
+    """Apply the audited dataset mapping and right-to-left ordering.
 
     Expects characters from ONE plate crop. This is not multi-plate grouping.
-    Mapping spellings are preserved, not independently linguistically validated.
+    Ambiguous aliases were reviewed against original labeled character images.
     Unknown classes (including plate bounding boxes) are ignored.
     """
     chars = [
