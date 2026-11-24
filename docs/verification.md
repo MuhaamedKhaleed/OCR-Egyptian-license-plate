@@ -12,7 +12,7 @@ Verified locally on Python 3.11.18. No training, real-weight inference, dataset 
 - `python -m ruff format --check src tests`: passed.
 - `python -m mypy src`: passed with typed definitions required and untyped bodies checked.
 - `python -m pre_commit run --all-files`: all local hooks passed in an initialized git checkout.
-- `command -v docker`: no executable found. Docker build/run was not possible.
+- `command -v docker`: no local executable found. Hosted CI later built and smoke-tested the container successfully, as recorded below.
 
 Typer 0.15.2 initially failed against the automatically selected Click 8.5.1. Pinning Click 8.1.8 fixed both required-option validation and help rendering, and the full suite passed again. No failed check is presented as a pass.
 
