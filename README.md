@@ -75,7 +75,7 @@ A credential was previously committed. The current notebook reads `ROBOFLOW_API_
 3. Run real inference, record expected outputs and failure examples, and test a held-out plate-level set.
 4. Make training paths configurable and validate the actual hardware/deployment stack before describing this as production-ready.
 
-No Docker image, hosted demo, release tag or CI badge is claimed. No hosted CI workflow is added in this no-fee pilot; run checks locally to avoid triggering billable jobs.
+No hosted demo or release tag is claimed. CI uses a standard Ubuntu runner only while this repository is public, with no uploaded artifacts, dependency cache or image publishing. If the repository becomes private, its job is skipped. See `docs/verification.md` for results and limits.
 
 ## Demo
 
@@ -83,4 +83,15 @@ A real-model screenshot or recording is not available yet. Add one only after va
 
 ## Verification status
 
-See `docs/verification.md` for exact commands, phase status, assumptions and remaining work. Docker is not installed in the verification environment, so no image build/run is claimed.
+See `docs/verification.md` for exact commands, phase status, assumptions and remaining work. Local Docker is unavailable. The CI workflow builds a multi-stage non-root CLI image and checks help, UID and invalid-input exit status. It intentionally excludes model weights and the optional ML runtime, so it does not validate real OCR inference.
+
+## Container
+
+The CLI smoke image contains runtime dependencies only, not trained weights or Ultralytics. These commands are run in CI:
+
+```sh
+docker build --tag egypt-plate-ocr:ci .
+docker run --rm egypt-plate-ocr:ci --help
+```
+
+No compose file is needed because the CLI has no companion service. Do not use this smoke image as a claim of a working model deployment.
