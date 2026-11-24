@@ -54,7 +54,6 @@ def decode_characters(detections: list[Detection]) -> dict[str, str]:
         for d in sorted(detections, key=lambda d: d.center_x, reverse=True)
         if d.label in ARABIC_MAPPING
     ]
-    return {
-        "letters": " ".join(c for c in chars if not c.isdigit()),
-        "numbers": " ".join(c for c in chars if c.isdigit()),
-}
+    letters = " ".join(c for c in chars if not c.isdigit())
+    numbers = " ".join(c for c in chars if c.isdigit())
+    return dict(letters=letters, numbers=numbers)
