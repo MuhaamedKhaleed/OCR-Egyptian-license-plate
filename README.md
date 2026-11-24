@@ -16,7 +16,8 @@ python -m egypt_plate_ocr --help
 python -m pytest --cov=egypt_plate_ocr --cov-report=term-missing
 python -m ruff check src tests
 python -m ruff format --check src tests
-python -m mypy src --ignore-missing-imports
+python -m mypy src
+python -m pre_commit run --all-files
 ```
 
 The package, help, and offline tests need no API keys, model download, paid service or GPU. Initial dependency installation requires internet access. Development dependency versions are in `pyproject.toml`; `uv.lock` records resolution. With uv installed, `uv sync --locked --extra dev` is an alternative.
@@ -39,6 +40,10 @@ Output is UTF-8 JSON with `letters` and `numbers`. An **offline decoder test**, 
 ```
 
 The original class mapping and right-to-left ordering are preserved. Unknown classes are ignored. This decoder assumes a single plate crop; it does not group multiple plates or establish legal plate validity. Mapping aliases and digit order still require review against the actual dataset.
+
+## Configuration
+
+Local inference requires no key. The optional `roboflow_key(Path(".env"))` helper loads an explicit dotenv file without overriding environment values and raises a clear error when `ROBOFLOW_API_KEY` is missing. It is not called during local inference. The original notebook still uses the environment directly.
 
 ## Architecture
 
@@ -71,3 +76,11 @@ A credential was previously committed. The current notebook reads `ROBOFLOW_API_
 4. Make training paths configurable and validate the actual hardware/deployment stack before describing this as production-ready.
 
 No Docker image, hosted demo, release tag or CI badge is claimed. No hosted CI workflow is added in this no-fee pilot; run checks locally to avoid triggering billable jobs.
+
+## Demo
+
+A real-model screenshot or recording is not available yet. Add one only after validating compatible weights on representative plate images. The JSON example above is decoder output, not a real image prediction.
+
+## Verification status
+
+See `docs/verification.md` for exact commands, phase status, assumptions and remaining work. Docker is not installed in the verification environment, so no image build/run is claimed.
