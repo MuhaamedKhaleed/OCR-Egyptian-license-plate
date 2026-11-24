@@ -1,0 +1,9 @@
+{
+  "synthetic_only": true,
+  "scope": "invented_character_boxes_decoder_only_not_detector_or_real_OCR",
+  "quality_claim": false,
+  "result": {
+    "letters": "أ ب",
+    "numbers": "٣ ١"
+  }
+}
