@@ -5,8 +5,6 @@ import argparse
 import json
 import random
 import hashlib
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 LETTERS = list("أبجدرسصطعفقلمنهوي")
 DIGITS = list("١٢٣٤٥٦٧٨٩")
@@ -25,6 +23,9 @@ def generate(out, fonts=None, latin_font=None):
             raise ValueError(
                 "Font missing. Pass --font and --latin-font with installed local files."
             )
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
     out.mkdir(exist_ok=False, parents=True)
     rng = random.Random(20261125)
     rows = []
@@ -149,6 +150,8 @@ def validate_data(data):
         if digest in hashes:
             raise ValueError("Identical image across manifest rows.")
         hashes.add(digest)
+        from PIL import Image
+
         with Image.open(p) as im:
             w, h = im.size
             if len(r["boxes"]) != 6:
@@ -166,6 +169,8 @@ def validate_data(data):
 
 
 def train(data, out):
+    import numpy as np
+    from PIL import Image
     import torch
     from torch import nn
 
