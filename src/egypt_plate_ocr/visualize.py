@@ -18,6 +18,8 @@ _PALETTE = [
 ]
 _ARABIC_FONTS = (
     "NotoSansArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "NotoNaskhArabic-Regular.ttf",
     "DejaVuSans.ttf",
     "arial.ttf",
@@ -50,41 +52,91 @@ def _font(size: int) -> tuple[Any, bool]:
 
 
 def annotate_image(image: Path, plates: list[dict[str, Any]], output: Path) -> Path:
-    """Save `image` with the plate box (black) and each character box (coloured).
+    """Save a zoomed view of each plate: boxes on the photo, every label below.
 
-    Character boxes are stored relative to the plate crop, so the crop origin is
-    added back. The label under each box is the glyph the model read. If no
-    Arabic-capable font is found (Noto, DejaVu or matplotlib's DejaVu), the class
-    name (for example qaf, 2) is drawn instead.
+    The view is the plate region plus a margin, scaled up to at least 1400 px
+    wide, then extended downward with a white strip. Each character label is drawn
+    directly under its own box on one row, so no label can fall off the image, and
+    the full recognized string is printed in a banner at the bottom. With several
+    plates the views are stacked. Boxes are the model's own detections (character
+    boxes are relative to the plate crop). If no Arabic-capable font is found the
+    class name (for example qaf, 2) is drawn instead.
     """
-    from PIL import Image, ImageDraw
+    from PIL import Image
 
     if not image.is_file():
         raise ValueError(f"Image not found: {image}.")
     if output.suffix.lower() not in {".jpg", ".jpeg", ".png"}:
         raise ValueError("Annotated output must end in .jpg, .jpeg or .png.")
-    canvas = Image.open(image).convert("RGB")
-    draw = ImageDraw.Draw(canvas)
-    line = max(2, canvas.width // 400)
-    for plate in plates:
-        left, top, right, bottom = plate["box"]
-        font, arabic_ok = _font(max(12, (bottom - top) // 3))
-        draw.rectangle((left, top, right, bottom), outline=(0, 0, 0), width=line + 1)
-        for index, char in enumerate(plate.get("characters", [])):
-            x1, y1, x2, y2 = char["box"]
-            color = _PALETTE[index % len(_PALETTE)]
-            draw.rectangle((left + x1, top + y1, left + x2, top + y2), outline=color, width=line)
-            text = char["char"] if arabic_ok else char["label"]
-            draw.text(
-                (
-                    left + (x1 + x2) / 2,
-                    bottom + 4 + (index % 2) * (max(12, (bottom - top) // 3) + 4),
-                ),
-                text,
-                font=font,
-                fill=color,
-                anchor="mt",
-            )
+    source = Image.open(image).convert("RGB")
+    views = [_plate_view(source, plate) for plate in plates] or [source]
+    width = max(view.width for view in views)
+    sheet = Image.new("RGB", (width, sum(view.height for view in views)), (255, 255, 255))
+    top = 0
+    for view in views:
+        sheet.paste(view, (0, top))
+        top += view.height
     output.parent.mkdir(parents=True, exist_ok=True)
-    canvas.save(output)
+    sheet.save(output)
     return output
+
+
+def _plate_view(source: Any, plate: dict[str, Any]) -> Any:
+    from PIL import Image, ImageDraw
+
+    left, top, right, bottom = plate["box"]
+    pad_x, pad_y = max(10, (right - left) // 8), max(10, (bottom - top) // 4)
+    x0, y0 = max(0, left - pad_x), max(0, top - pad_y)
+    x1, y1 = min(source.width, right + pad_x), min(source.height, bottom + pad_y)
+    scale = max(1.0, 1400 / (x1 - x0))
+    view = source.crop((x0, y0, x1, y1)).resize(
+        (round((x1 - x0) * scale), round((y1 - y0) * scale)), Image.LANCZOS
+    )
+
+    def to_view(x: float, y: float) -> tuple[float, float]:
+        return (x - x0) * scale, (y - y0) * scale
+
+    size = max(28, view.width // 22)
+    font, arabic_ok = _font(size)
+    chars = plate.get("characters", [])
+    text = " ".join(c["char"] if arabic_ok else c["label"] for c in chars)
+    names = " ".join(c["label"] for c in chars)
+    strip = size * 2 + 30
+    banner = size * 3 + 40
+    canvas = Image.new("RGB", (view.width, view.height + strip + banner), (255, 255, 255))
+    canvas.paste(view, (0, 0))
+    draw = ImageDraw.Draw(canvas)
+    line = max(3, view.width // 300)
+    draw.rectangle((*to_view(left, top), *to_view(right, bottom)), outline=(0, 0, 0), width=line + 1)
+    for index, char in enumerate(chars):
+        cx1, cy1, cx2, cy2 = char["box"]
+        color = _PALETTE[index % len(_PALETTE)]
+        bx1, by1 = to_view(left + cx1, top + cy1)
+        bx2, by2 = to_view(left + cx2, top + cy2)
+        draw.rectangle((bx1, by1, bx2, by2), outline=color, width=line)
+        label = char["char"] if arabic_ok else char["label"]
+        centre = (bx1 + bx2) / 2
+        draw.line((centre, by2, centre, view.height + 4), fill=color, width=max(1, line // 2))
+        draw.text((centre, view.height + 8), label, font=font, fill=color, anchor="mt")
+        draw.text(
+            (centre, view.height + 8 + size + 6),
+            f"{char['confidence']:.2f}",
+            font=_font(max(16, size // 2))[0],
+            fill=color,
+            anchor="mt",
+        )
+    draw.text(
+        (view.width / 2, view.height + strip + 10),
+        text or "(no characters read)",
+        font=font,
+        fill=(0, 0, 0),
+        anchor="mt",
+    )
+    draw.text(
+        (view.width / 2, view.height + strip + size + 30),
+        "classes: " + names,
+        font=_font(max(16, size // 2))[0],
+        fill=(60, 60, 60),
+        anchor="mt",
+    )
+    return canvas
