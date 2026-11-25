@@ -41,6 +41,17 @@ Output is UTF-8 JSON with `letters` and `numbers`. An **offline decoder test**, 
 
 The original right-to-left ordering is preserved. Arabic aliases were reviewed against the original saved training annotations and matching character crops, not inferred from their English spellings. Near-identical character boxes (IoU at least 0.8) and nested same-label boxes are reduced to the strongest detection. Unknown classes are ignored. Single-crop mode does not group plates or establish legal plate validity.
 
+## Public plate detector (localization only)
+
+A verified public checkpoint can localize Egyptian plates from a fresh clone today; character recognition still needs your own trained weights (the owner's checkpoint is private, and no licensed public character model was found). `scripts/fetch_detector.py` downloads the pinned, MIT-licensed `omasayeddd/egyptian-license-plate-detector` (single class `license_plate`) with SHA-256 verification:
+
+```sh
+python scripts/fetch_detector.py --output ./detector
+egypt-plate-ocr --image path/to/car.jpg --weights ./detector/egyptian-plate-detector.pt --confidence 0.25 --auto-crop --detector-label license_plate --localize-only
+```
+
+`--localize-only` returns plate boxes and detector confidences without character decoding. Verified on CPU with the repository's pinned ultralytics 8.3.0; see [commands, output and rights notes](docs/public-detector.md). This is localization evidence, not OCR accuracy.
+
 For a full vehicle image, opt in to separate localization and recognition:
 
 ```sh
