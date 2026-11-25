@@ -64,8 +64,12 @@ def export_yolo(data: Path, out: Path) -> Path:
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    p.add_argument("--data", type=Path, required=True, help="output of synthetic_plate_cpu.py generate")
-    p.add_argument("--base", type=Path, required=True, help="local .pt that supplies the architecture")
+    p.add_argument(
+        "--data", type=Path, required=True, help="output of synthetic_plate_cpu.py generate"
+    )
+    p.add_argument(
+        "--base", type=Path, required=True, help="local .pt that supplies the architecture"
+    )
     p.add_argument("--output", type=Path, required=True, help="new directory")
     p.add_argument("--epochs", type=int, default=30)
     p.add_argument("--image-size", type=int, default=352)
