@@ -34,6 +34,24 @@ class CoreTests(unittest.TestCase):
         ]
         self.assertEqual(len(_unique_characters(candidates)), 3)
 
+    def test_nested_same_label_duplicate_removed(self):
+        candidates = [
+            ("9", [14, 50, 35, 96], 0.80),
+            ("9", [14, 73, 22, 92], 0.21),
+            ("3", [37, 51, 60, 98], 0.80),
+        ]
+        self.assertEqual(
+            decode_characters(_unique_characters(candidates)),
+            {"letters": "", "numbers": "٣ ٩"},
+        )
+
+    def test_nested_different_label_kept(self):
+        candidates = [
+            ("faa", [101, 45, 118, 80], 0.39),
+            ("kaaf", [101, 42, 127, 79], 0.21),
+        ]
+        self.assertEqual(len(_unique_characters(candidates)), 2)
+
     def test_zero_area_boxes_do_not_divide_by_zero(self):
         self.assertEqual(len(_unique_characters([("baa", [0, 0, 0, 0], 0.5)])), 1)
 
