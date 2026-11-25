@@ -20,12 +20,26 @@ def predict(
     weights: Path = typer.Option(..., help="Trusted compatible local YOLO weights."),
     confidence: float = typer.Option(0.2, help="Detection confidence between 0 and 1."),
     auto_crop: bool = typer.Option(False, help="Find and decode each plate independently."),
+    detector_label: str = typer.Option(
+        "License Plate", help="Plate class name inside the supplied weights."
+    ),
+    localize_only: bool = typer.Option(
+        False, help="Return plate boxes only, without character decoding. Requires --auto-crop."
+    ),
 ) -> None:
     """Decode one local plate image. No weights are downloaded by this wrapper."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
+        if localize_only and not auto_crop:
+            raise ValueError("--localize-only requires --auto-crop.")
         result = (
-            predict_plates(image, weights, confidence)
+            predict_plates(
+                image,
+                weights,
+                confidence,
+                detector_label=detector_label,
+                localize_only=localize_only,
+            )
             if auto_crop
             else predict_plate(image, weights, confidence)
         )
