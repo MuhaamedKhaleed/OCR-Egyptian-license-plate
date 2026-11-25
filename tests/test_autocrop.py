@@ -99,6 +99,7 @@ class AutoCropTests(TestCase):
 class CharacterBoxTests(TestCase):
     def _run(self, **kwargs):
         calls = []
+        self.kws = kws = []
 
         class Model:
             def __init__(self, weights):
@@ -106,6 +107,7 @@ class CharacterBoxTests(TestCase):
 
             def predict(self, **kw):
                 calls.append(kw["source"])
+                kws.append(kw)
                 if len(calls) == 1:
                     return [
                         SimpleNamespace(
@@ -143,3 +145,15 @@ class CharacterBoxTests(TestCase):
     def test_boxes_with_localize_only_rejected(self):
         with self.assertRaises(ValueError):
             self._run(include_boxes=True, localize_only=True)
+
+    def test_tta_is_off_by_default_and_only_on_the_character_pass(self):
+        self._run()
+        self.assertNotIn("augment", self.kws[0])
+        self.assertNotIn("augment", self.kws[1])
+        self._run(tta=True)
+        self.assertNotIn("augment", self.kws[0])
+        self.assertIs(self.kws[1]["augment"], True)
+
+    def test_tta_with_localize_only_rejected(self):
+        with self.assertRaises(ValueError):
+            self._run(tta=True, localize_only=True)
