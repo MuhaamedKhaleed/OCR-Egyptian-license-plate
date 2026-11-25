@@ -46,3 +46,17 @@ After freezing the revised mapping and crop code, ran sorted images `img_011.jpg
 - Failures: image 016 confuses kaf/faa and duplicates a digit 1; images 017 and 019 omit dal. The extra background output in 017 has incomplete text.
 
 Code was not retuned to these results. Different image slices prevent treating 6/10 versus 7/10 as a controlled improvement. This small same-source slice is not a general accuracy estimate; original training overlap is uncertified. The three failures are unresolved. A larger independently held-out and vehicle-separated evaluation is still needed.
+
+## Prospective third slice and nested-duplicate fix, 2026-11-25
+
+Sorted images `img_021.jpg` through `img_050.jpg` from the same external source, same recovered checkpoint, confidence 0.2, CPU only. Every source ground-truth label in this slice was re-verified visually against the plate pixels before scoring; all 30 matched. The ground-truth list had been visible during earlier repository inspection, so this remains prospective execution on a same-source convenience sample, not a blinded or vehicle-separated held-out test. Training-corpus overlap is uncertified.
+
+- Primary-crop exact text: 27 of 30. Correct digit sequence: 28 of 30. Localized: 30 of 30, no extra plate detections in this slice.
+- Hard conditions present and read exactly: motion blur (042, 049), a cable across the plate (047), weathered/faded plates (040, 050), tilted angle (031). Low-light 033 failed.
+- Failures: 033 and 037 are physically reversed-order digit plates (digits stamped right-to-left, unlike the other 48); the fixed right-to-left center sort inverts the number, and 033 also added a nested duplicate digit. 048 fired `faa` (0.39) beside the correct `kaaf` on the same glyph below the 0.8 IoU threshold.
+
+Decoder duplicate handling was then extended: nested same-label boxes (one covering at least 0.8 of the other) now keep only the strongest detection. Different labels on the same glyph are deliberately kept, because resolving them by confidence alone picks the wrong class on 048. Measured on the cached raw detections of all 50 source images with only the decoder changed: primary-crop exact 43 to 44 (008 duplicate `alef` fixed; nested duplicate digits in 016 and 033 removed without making either exact), no regressions.
+
+Full 50-image source corpus with current code: localized 50 of 50, primary-crop digit sequence 48 of 50, primary-crop exact 44 of 50, full-frame exact 17 of 50. Remaining failures: 016 `kaf` read as `faa`, 017 and 019 omit `dal`, 033 and 037 reversed digit order, 048 spurious `faa`. Auto-crop remains essential: full-frame decoding without it is far weaker. These are same-source convenience-sample counts, not general accuracy estimates.
+
+Real-weights integration is now repeatable: `scripts/evaluate_external_slice.py` reruns this evaluation locally, and the installed CLI (`--auto-crop` and single-crop modes) was exercised against the recovered checkpoint with exit status 0 and correct output. CI still excludes weights, so this integration remains a documented local procedure, not an automated CI check.
