@@ -90,7 +90,7 @@ def _plate_view(source: Any, plate: dict[str, Any]) -> Any:
     x1, y1 = min(source.width, right + pad_x), min(source.height, bottom + pad_y)
     scale = max(1.0, 1400 / (x1 - x0))
     view = source.crop((x0, y0, x1, y1)).resize(
-        (round((x1 - x0) * scale), round((y1 - y0) * scale)), Image.LANCZOS
+        (round((x1 - x0) * scale), round((y1 - y0) * scale)), Image.Resampling.LANCZOS
     )
 
     def to_view(x: float, y: float) -> tuple[float, float]:
@@ -107,7 +107,9 @@ def _plate_view(source: Any, plate: dict[str, Any]) -> Any:
     canvas.paste(view, (0, 0))
     draw = ImageDraw.Draw(canvas)
     line = max(3, view.width // 300)
-    draw.rectangle((*to_view(left, top), *to_view(right, bottom)), outline=(0, 0, 0), width=line + 1)
+    draw.rectangle(
+        (*to_view(left, top), *to_view(right, bottom)), outline=(0, 0, 0), width=line + 1
+    )
     for index, char in enumerate(chars):
         cx1, cy1, cx2, cy2 = char["box"]
         color = _PALETTE[index % len(_PALETTE)]
