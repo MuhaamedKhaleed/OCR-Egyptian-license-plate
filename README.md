@@ -39,7 +39,7 @@ Output is UTF-8 JSON with `letters` and `numbers`. An **offline decoder test**, 
 {"letters": "أ ب", "numbers": "٣ ١"}
 ```
 
-The original right-to-left ordering is preserved. Arabic aliases were reviewed against the original saved training annotations and matching character crops, not inferred from their English spellings. Near-identical character boxes (IoU at least 0.8) are reduced to the strongest detection. Unknown classes are ignored. Single-crop mode does not group plates or establish legal plate validity.
+The original right-to-left ordering is preserved. Arabic aliases were reviewed against the original saved training annotations and matching character crops, not inferred from their English spellings. Near-identical character boxes (IoU at least 0.8) and nested same-label boxes are reduced to the strongest detection. Unknown classes are ignored. Single-crop mode does not group plates or establish legal plate validity.
 
 For a full vehicle image, opt in to separate localization and recognition:
 
