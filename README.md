@@ -4,6 +4,21 @@ A YOLO training notebook with a small local-inference package for decoding Egypt
 
 **Status:** tested package and CPU inference using the original saved checkpoint, not a verified production parking system. Weights are not included. Reviewed Arabic aliases are corrected, but recognition errors remain; retraining, hardware deployment, Firebase and a mobile app have not been verified here.
 
+## Fork-to-output paths (what works without private files)
+
+Needs Python 3.11 or 3.12 (`uv sync --python 3.11 --locked --extra inference --extra dev`; the locked PyTorch wheels have no 3.13+ build) and about 2 GB of RAM.
+
+1. **Plate localization, works today from a fresh clone** (pinned public detector, no private weights):
+   `python scripts/fetch_detector.py --output ./detector` then the `--localize-only` command in "Public plate detector" below. This returns plate boxes, not characters.
+2. **Character reading on real photos needs data you must supply.** No licensed public character model or labeled Egyptian character dataset is bundled or fetched. Prepare your own YOLO-format dataset (`data.yaml`, one class per character using the names in `ARABIC_MAPPING` in `src/egypt_plate_ocr/core.py`), then train with `egypt_plate_ocr.training.train_local` (or the notebook's `OCR_RUN_TRAINING` settings) using `./detector/egyptian-plate-detector.pt` as the local architecture/weights file, and read plates with `egypt-plate-ocr --weights YOUR/best.pt`. The maintainer's own trained weights are private and are not distributed.
+3. **Synthetic mechanics demo (NOT evidence for real photos).** `scripts/yolo_synthetic_train.py` renders fictional plates, exports them in YOLO format, trains with the package adapter and writes `best.pt` that `egypt-plate-ocr` can load. It proves the generate, train and read plumbing runs end to end. It does not show the result reads real plates; the earlier synthetic-to-real check read 3 of 21 characters (`docs/synthetic500.md`). One epoch takes about a minute on one CPU core, so use a GPU (`--device 0`) or leave it running for 20+ epochs:
+   ```sh
+   uv run --no-sync python scripts/synthetic_plate_cpu.py generate --data ./syn
+   uv run --no-sync python scripts/fetch_detector.py --output ./detector
+   uv run --no-sync python scripts/yolo_synthetic_train.py --data ./syn --base ./detector/egyptian-plate-detector.pt --output ./char-model --epochs 20 --batch 8
+   uv run --no-sync egypt-plate-ocr --image ./syn/test/0450.jpg --weights ./char-model/train/weights/best.pt --confidence 0.1
+   ```
+
 ## Quick start
 
 Use Python 3.11 or later. From the repository root:
