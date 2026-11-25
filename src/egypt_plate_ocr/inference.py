@@ -107,6 +107,7 @@ def predict_plates(
     detector_label: str = "License Plate",
     localize_only: bool = False,
     include_boxes: bool = False,
+    tta: bool = False,
 ) -> list[dict[str, Any]]:
     """Localize plates, then decode each crop independently.
 
@@ -125,6 +126,8 @@ def predict_plates(
         raise ValueError("Confidence must be between 0 and 1.")
     if include_boxes and localize_only:
         raise ValueError("include_boxes cannot be combined with localize_only.")
+    if tta and localize_only:
+        raise ValueError("tta cannot be combined with localize_only.")
     if not image.is_file() or not weights.is_file():
         raise ValueError("Image and trusted weights must both be existing files.")
     if model_factory is None:
@@ -157,7 +160,8 @@ def predict_plates(
             output.append({"box": bounds, "confidence": float(box.conf.item())})
             continue
         crop = frame.orig_img[top:bottom, left:right]
-        results = model.predict(source=crop, conf=confidence, verbose=False)
+        predict_kwargs: dict[str, Any] = {"augment": True} if tta else {}
+        results = model.predict(source=crop, conf=confidence, verbose=False, **predict_kwargs)
         candidates = []
         if results:
             result = results[0]
