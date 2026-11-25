@@ -31,6 +31,10 @@ def predict(
         False,
         help="Add the model's per-character boxes to each plate. Requires --auto-crop.",
     ),
+    tta: bool = typer.Option(
+        False,
+        help="Opt-in test-time augmentation on each plate crop (slower). Requires --auto-crop.",
+    ),
     annotate: Path | None = typer.Option(
         None,
         help="Write an image with the plate box and one box per character. Requires --auto-crop.",
@@ -41,6 +45,10 @@ def predict(
     try:
         if localize_only and not auto_crop:
             raise ValueError("--localize-only requires --auto-crop.")
+        if tta and not auto_crop:
+            raise ValueError("--tta requires --auto-crop.")
+        if tta and localize_only:
+            raise ValueError("--tta cannot be used with --localize-only.")
         if (char_boxes or annotate) and not auto_crop:
             raise ValueError("--char-boxes and --annotate require --auto-crop.")
         if (char_boxes or annotate) and localize_only:
@@ -53,6 +61,7 @@ def predict(
                 detector_label=detector_label,
                 localize_only=localize_only,
                 include_boxes=bool(char_boxes or annotate),
+                tta=tta,
             )
             if auto_crop
             else predict_plate(image, weights, confidence)
