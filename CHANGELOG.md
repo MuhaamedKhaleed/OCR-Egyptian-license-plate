@@ -35,3 +35,7 @@ Added standalone invented-input backend demo, checked JSON output and documented
 - Replace platform-specific notebook execution with local opt-in CPU training/inference and a safe default decoder run.
 - Add local training guards and notebook execution regressions; document actual one-epoch random-weight/rectangle smoke with zero quality claim.
 - Correct stale credential/license/cache documentation, preserve inherited-rights caveats, and pin Node 24 checkout/cache releases.
+
+### Public detector follow-up
+
+Added pinned public plate-localization download (scripts/fetch_detector.py), --detector-label and --localize-only options with offline tests, and docs/public-detector.md with verified CPU output. Character recognition still requires the owner's private checkpoint or own training; no weights published.
