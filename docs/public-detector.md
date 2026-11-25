@@ -40,7 +40,7 @@ way.
 
 Three vehicle images from the EALPR Vehicles folder
 (`0001.jpg`, `0100.jpg`, `1000.jpg`, raw files from
-github.com/ahmedramadan96/EALPR), ultralytics 8.3.0, torch 2.4.1+cpu,
+github.com/ahmedramadan96/EALPR, path `EALPR Vechicles dataset/Vehicles/NNNN.jpg`, spelled that way upstream), ultralytics 8.3.0, torch 2.4.1+cpu,
 python 3.12:
 
 ```json
