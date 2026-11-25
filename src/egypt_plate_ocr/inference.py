@@ -89,12 +89,22 @@ def predict_plate(
 
 
 def predict_plates(
-    image: Path, weights: Path, confidence: float = 0.2, *, model_factory: Any = None
+    image: Path,
+    weights: Path,
+    confidence: float = 0.2,
+    *,
+    model_factory: Any = None,
+    detector_label: str = "License Plate",
+    localize_only: bool = False,
 ) -> list[dict[str, Any]]:
     """Localize plates, then decode each crop independently.
 
     Returns no entries when no plate is detected. It never mixes characters
     across plates or silently falls back to whole-frame decoding.
+    detector_label names the plate class in the supplied weights, so a
+    localization-only public model (for example class "license_plate") can
+    find plates. localize_only returns boxes without character decoding, for
+    weights that carry no character classes.
     """
     if not 0 <= confidence <= 1:
         raise ValueError("Confidence must be between 0 and 1.")
@@ -114,7 +124,7 @@ def predict_plates(
     height, width = frame.orig_img.shape[:2]
     output = []
     for box in frame.boxes:
-        if frame.names[int(box.cls.item())] != "License Plate":
+        if frame.names[int(box.cls.item())] != detector_label:
             continue
         x1, y1, x2, y2 = [float(v) for v in box.xyxy[0].tolist()]
         bounds = [
@@ -125,6 +135,9 @@ def predict_plates(
         ]
         left, top, right, bottom = bounds
         if right <= left or bottom <= top:
+            continue
+        if localize_only:
+            output.append({"box": bounds, "confidence": float(box.conf.item())})
             continue
         crop = frame.orig_img[top:bottom, left:right]
         results = model.predict(source=crop, conf=confidence, verbose=False)
