@@ -11,10 +11,13 @@ with the read glyph under it. Both flags need local trusted weights with charact
 egypt-plate-ocr --image car.jpg --weights best.pt --auto-crop --annotate out.jpg
 ```
 
-Status: unit tests cover the box output and the renderer on synthetic data. Not yet run end to end
-with real weights in this branch: the worker that produced the earlier sheets used a private notebook
-copy of the same logic (real model detections, not committed). The `--annotate` label font falls back
-to the class name when no Arabic-capable font is installed.
+Status: unit tests cover the box output and the renderer on synthetic data. The CLI path was also run
+end to end on a real model: Kaggle notebook, Ultralytics 8.3.0, the original (private, not published)
+yolov8m checkpoint, full-size Pexels photos, exit code 0 and per-character boxes drawn on the image.
+That was a small, clear, already-seen sample, so it shows the feature runs, not how accurate it is.
+Results depend on image scale: the same photo resized differently gave different text. The label under
+each box is the Arabic glyph when an Arabic-capable font is found (Noto, DejaVu, or the DejaVu file
+that ships with matplotlib); otherwise the class name (for example qaf or 2) is drawn.
 
 # Training options
 
