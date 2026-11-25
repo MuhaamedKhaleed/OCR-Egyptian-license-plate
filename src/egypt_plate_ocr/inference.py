@@ -17,15 +17,36 @@ def _overlap(first: list[float], second: list[float]) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def _unique_characters(candidates: list[tuple[str, list[float], float]]) -> list[Detection]:
-    """Keep the stronger character when two classes claim the same box.
+def _containment(first: list[float], second: list[float]) -> float:
+    """Share of the smaller box covered by the intersection of two xyxy boxes."""
+    x1, y1 = max(first[0], second[0]), max(first[1], second[1])
+    x2, y2 = min(first[2], second[2]), min(first[3], second[3])
+    intersection = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+    first_area = max(0.0, first[2] - first[0]) * max(0.0, first[3] - first[1])
+    second_area = max(0.0, second[2] - second[0]) * max(0.0, second[3] - second[1])
+    smaller = min(first_area, second_area)
+    return intersection / smaller if smaller > 0 else 0.0
 
-    The high IoU threshold only removes near-identical boxes. It does not merge
-    adjacent letters, normalize Arabic spelling or group multiple plates.
+
+def _unique_characters(candidates: list[tuple[str, list[float], float]]) -> list[Detection]:
+    """Keep the stronger character when detections duplicate one glyph.
+
+    The high IoU threshold removes near-identical boxes. Nested same-label boxes
+    (one box covering at least 0.8 of the other) are also reduced, which handles
+    a stronger detection firing twice on one character at different scales.
+    Different labels on the same glyph are kept: resolving those by confidence
+    alone was observed to pick the wrong class, so they stay visible as model
+    errors. It does not merge adjacent letters, normalize Arabic spelling or
+    group multiple plates.
     """
     kept: list[tuple[str, list[float], float]] = []
     for candidate in sorted(candidates, key=lambda item: item[2], reverse=True):
-        if not any(_overlap(candidate[1], other[1]) >= 0.8 for other in kept):
+        duplicate = any(
+            _overlap(candidate[1], other[1]) >= 0.8
+            or (candidate[0] == other[0] and _containment(candidate[1], other[1]) >= 0.8)
+            for other in kept
+        )
+        if not duplicate:
             kept.append(candidate)
     return [Detection(label, (coords[0] + coords[2]) / 2) for label, coords, _ in kept]
 
