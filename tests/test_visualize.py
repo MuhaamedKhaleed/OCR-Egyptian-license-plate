@@ -32,3 +32,15 @@ def test_rejects_bad_output_name(tmp_path):
     Image.new("RGB", (50, 50)).save(source)
     with pytest.raises(ValueError):
         annotate_image(source, PLATES, tmp_path / "x.txt")
+
+
+def test_falls_back_to_class_names_without_arabic_font(tmp_path, monkeypatch):
+    from PIL import ImageFont
+
+    import egypt_plate_ocr.visualize as viz
+
+    monkeypatch.setattr(viz, "_font", lambda size: (ImageFont.load_default(), False))
+    source, out = tmp_path / "in.png", tmp_path / "b.png"
+    Image.new("RGB", (200, 120), "white").save(source)
+    annotate_image(source, PLATES, out)
+    assert out.is_file()
