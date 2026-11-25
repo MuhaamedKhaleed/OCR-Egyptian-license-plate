@@ -1,9 +1,10 @@
 """Rendering test on a synthetic image and hand-built result (no model)."""
 
 import pytest
-from PIL import Image
 
 from egypt_plate_ocr.visualize import annotate_image
+
+Image = pytest.importorskip("PIL.Image", reason="Pillow ships with the inference extra")
 
 PLATES = [
     {
