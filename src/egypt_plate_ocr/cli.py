@@ -3,6 +3,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import typer
 from click.exceptions import Exit
@@ -44,7 +45,7 @@ def predict(
             raise ValueError("--char-boxes and --annotate require --auto-crop.")
         if (char_boxes or annotate) and localize_only:
             raise ValueError("--char-boxes and --annotate cannot be used with --localize-only.")
-        result = (
+        result: Any = (
             predict_plates(
                 image,
                 weights,
