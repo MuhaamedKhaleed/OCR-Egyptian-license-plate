@@ -25,23 +25,37 @@ _ARABIC_FONTS = (
 )
 
 
-def _font(size: int) -> Any:
+def _font(size: int) -> tuple[Any, bool]:
+    """Return (font, can_draw_arabic). Falls back to a scalable Latin font."""
     from PIL import ImageFont
 
-    for name in _ARABIC_FONTS:
+    candidates = list(_ARABIC_FONTS)
+    try:
+        import matplotlib
+
+        candidates.append(
+            str(Path(matplotlib.get_data_path()) / "fonts" / "ttf" / "DejaVuSans.ttf")
+        )
+    except ImportError:
+        pass
+    for name in candidates:
         try:
-            return ImageFont.truetype(name, size)
+            return ImageFont.truetype(name, size), True
         except OSError:
             continue
-    return ImageFont.load_default()
+    try:
+        return ImageFont.load_default(size), False
+    except TypeError:
+        return ImageFont.load_default(), False
 
 
 def annotate_image(image: Path, plates: list[dict[str, Any]], output: Path) -> Path:
     """Save `image` with the plate box (black) and each character box (coloured).
 
     Character boxes are stored relative to the plate crop, so the crop origin is
-    added back. The label under each box is the glyph the model read. If the
-    default font cannot show Arabic, the class name is drawn instead.
+    added back. The label under each box is the glyph the model read. If no
+    Arabic-capable font is found (Noto, DejaVu or matplotlib's DejaVu), the class
+    name (for example qaf, 2) is drawn instead.
     """
     from PIL import Image, ImageDraw
 
@@ -54,15 +68,18 @@ def annotate_image(image: Path, plates: list[dict[str, Any]], output: Path) -> P
     line = max(2, canvas.width // 400)
     for plate in plates:
         left, top, right, bottom = plate["box"]
-        font = _font(max(12, (bottom - top) // 3))
+        font, arabic_ok = _font(max(12, (bottom - top) // 3))
         draw.rectangle((left, top, right, bottom), outline=(0, 0, 0), width=line + 1)
         for index, char in enumerate(plate.get("characters", [])):
             x1, y1, x2, y2 = char["box"]
             color = _PALETTE[index % len(_PALETTE)]
             draw.rectangle((left + x1, top + y1, left + x2, top + y2), outline=color, width=line)
-            text = char["char"] if font.getmask(char["char"]).getbbox() else char["label"]
+            text = char["char"] if arabic_ok else char["label"]
             draw.text(
-                (left + (x1 + x2) / 2, bottom + 4 + (index % 2) * (font.size + 4)),
+                (
+                    left + (x1 + x2) / 2,
+                    bottom + 4 + (index % 2) * (max(12, (bottom - top) // 3) + 4),
+                ),
                 text,
                 font=font,
                 fill=color,
