@@ -80,6 +80,8 @@ egypt-plate-ocr --image path/to/car.jpg --weights path/to/best.pt --confidence 0
 
 Auto-crop mode detects `License Plate` boxes, adds a fixed small margin, and predicts each crop independently. It returns a JSON list with `box` (pixel xyxy), detector `confidence`, `letters` and `numbers` for each plate. No detected plate returns `[]`, with no full-frame fallback. Every detected plate is returned, including possible false positives. Confidence is the plate detector score, not a probability that its text is correct.
 
+Optional `--char-source frame` reads characters from the same full-frame pass (those whose box center lies inside each plate box) instead of re-running the model on each crop. The default stays `crop`, so existing behaviour is unchanged. For weights trained on whole 640x640 images, a small controlled test on training images read 29 of 32 plates exactly with whole-frame characters and 4 of 32 with the crop re-run (see `docs/kaggle-real-data-verification.md`). That test used training images only and says nothing about held-out reading.
+
 ## Configuration and portable notebook
 
 `model-ocr.ipynb` is now a local, opt-in workflow using the reviewed package. Its default execution runs only an invented decoder example and skips training/image inference. It has no install/download cells, Roboflow calls, Kaggle paths or GPU assumption. Install `uv sync --locked --extra inference --extra dev` before opening it from the repository root.
