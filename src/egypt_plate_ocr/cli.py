@@ -35,6 +35,11 @@ def predict(
         False,
         help="Opt-in test-time augmentation on each plate crop (slower). Requires --auto-crop.",
     ),
+    char_source: str = typer.Option(
+        "crop",
+        help='Where characters come from with --auto-crop: "crop" re-runs the model on each '
+        'plate crop; "frame" uses the full-frame detections inside each plate box.',
+    ),
     annotate: Path | None = typer.Option(
         None,
         help="Write an image with the plate box and one box per character. Requires --auto-crop.",
@@ -62,6 +67,7 @@ def predict(
                 localize_only=localize_only,
                 include_boxes=bool(char_boxes or annotate),
                 tta=tta,
+                char_source=char_source,
             )
             if auto_crop
             else predict_plate(image, weights, confidence)
