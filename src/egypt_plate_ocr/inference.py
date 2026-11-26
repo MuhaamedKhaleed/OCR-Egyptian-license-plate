@@ -245,7 +245,8 @@ def predict_plates(
         "fallback": "whole_frame",
         "box": [0, 0, width, height],
         "confidence": 0.0,
-        "note": note + "; characters read from the whole frame and may include text outside a plate.",
+        "note": note
+        + "; characters read from the whole frame and may include text outside a plate.",
         **decode_characters([Detection(lab, (xy[0] + xy[2]) / 2) for lab, xy, _ in kept]),
     }
     if include_boxes:
