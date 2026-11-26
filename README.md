@@ -116,18 +116,18 @@ The new owned engineering code has a scoped MIT license, not a license grant ove
 
 ## Security
 
-A credential was previously committed and the owner clarified it was copied from a third party. It was neither used nor revoked during this work. The current notebook has no credential call or saved outputs. Git history/main and external Kaggle copies are unchanged; cleanup remains a separately coordinated step. Never put a replacement key in this repository.
+A credential was previously committed and the owner clarified it was copied from a third party. It was neither used nor revoked during this work. The current notebook has no credential call or saved outputs. The old key may still appear in earlier git history and in external Kaggle copies; cleaning those is a separate step that has not been done. Never put a replacement key in this repository.
 
 Ultralytics 8.3.0 is AGPL-3.0 software. Its vendor also states model-related licensing conditions. The package's scoped MIT notice does not override those conditions or grant rights to recovered weights. No paid license was purchased and no private/commercial deployment is approved. See `docs/provenance.md`.
 
 ## Next steps
 
-1. Confirm the author's contribution and how this component fits the graduation parking system.
-2. Review model/code redistribution rights; recovered compatible weights remain outside this repository.
+1. Review model/code redistribution rights; the maintainer's trained weights are not part of this repository.
+2. Confirm how this component fits the graduation parking system it came from.
 3. Extend the annotation-grounded mapping audit, investigate missing/confused characters, and evaluate a genuinely held-out plate-level set.
 4. Validate real dataset annotations, independent splits and the actual hardware/deployment stack. Local path portability is now implemented but original full-scale results are not reproduced.
 
-No hosted demo or release tag is claimed. CI uses a standard Ubuntu runner only while this repository is public, with no uploaded artifacts or image publishing. Download caching is keyed by uv.lock. If the repository becomes private, its job is skipped. See `docs/verification.md` for results and limits.
+No hosted demo or release tag is claimed. Reported reading numbers are mostly in-sample-leaning; no held-out plate-level accuracy has been measured. CI uses a standard Ubuntu runner only while this repository is public, with no uploaded artifacts or image publishing. Download caching is keyed by uv.lock. If the repository becomes private, its job is skipped. See `docs/verification.md` for results and limits.
 
 ## Demo
 
