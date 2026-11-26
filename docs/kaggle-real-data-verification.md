@@ -28,11 +28,30 @@ Controlled memorization test (not a held-out result): 32 training images, 120 ep
 | --- | --- |
 | Whole image, character boxes only | 29 / 32 |
 | `--auto-crop` (plate box, then re-run on the crop) | 4 / 32 |
-| `--auto-crop --char-source frame` | measured next, see below |
+| `--auto-crop --char-source frame` | not run on this 32-image model (see the GPU result below) |
 
 The `License Plate` gate fired on 32 / 32 images, so the gap comes from re-running the model on a tight crop, where characters appear at a scale the model was not trained on. An earlier 80-epoch run (320 steps) did not memorize the same set, which shows the step count matters for such a test. At confidence 0.001 both paths read 0 / 32 (about 105 raw boxes per image of noise). This result is limited to this small training-set test.
 
 `--char-source frame` (new, opt-in; the default stays `crop`) takes the characters from the one full-frame pass and keeps those whose box center lies inside each plate box.
+
+## GPU result with a full-train model (26 November 2026, free Kaggle T4)
+
+Setup: `train_local` on the full train split (6,645 images), 15 epochs, batch 16, `device=0`, the pinned public nano plate detector as the start, default warmup and augmentation, commit `a3d4a99a`. Weights stayed in `/tmp` and were wiped; no version was saved. Detector metrics on the Roboflow v1 export: valid mAP50 0.655 / mAP50-95 0.380; test mAP50 0.726 / mAP50-95 0.475. Valid and test overlap the training photos (see `docs/provenance.md`), so these are in-sample-leaning numbers, not clean held-out results. This is a different setup from the original yolov8m run (mAP50 0.90) and not a like-for-like comparison.
+
+Same checkpoint, same 408 test images, confidence 0.25, exact plate text:
+
+| Subset | Whole image (direct) | `--auto-crop` (crop, default) | `--auto-crop --char-source frame` |
+| --- | --- | --- | --- |
+| All 408 | 164 | 129 | 67 |
+| 170 with a `License Plate` box (vehicle photos) | 45 | 126 | 64 |
+| 238 without one (plate-crop style) | 119 | 3 | 3 |
+
+What this shows, for this checkpoint and split:
+
+- `--auto-crop` with the default `crop` mode works when the model finds a plate box (126 / 170 exact). This contradicts the memorization-test hypothesis above: the frame mode is not an improvement here, it is worse (64 / 170).
+- On plate-crop-style images the plate gate rarely fires (3 / 238), so `--auto-crop` returns `[]`. Reading the whole image directly gets 119 / 238 exact. The original empty `[]` on test image `1138FF` reproduces: `--auto-crop` returns `[]` in both modes, and direct decoding reads it exactly (`ف ف` / `٨ ٣ ١ ١`).
+- Use direct mode (no `--auto-crop`) for inputs that are already plate crops, and `--auto-crop` for full vehicle photos.
+- `--char-source frame` is kept only as a documented option. It was measured not helpful and is not recommended.
 
 ## Weights and cleanup
 
