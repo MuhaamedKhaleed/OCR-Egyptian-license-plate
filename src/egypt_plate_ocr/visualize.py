@@ -184,9 +184,18 @@ def _notice_view(source: Any, note: str) -> Any:
     canvas = Image.new("RGB", (view.width, view.height + 110), (255, 255, 255))
     canvas.paste(view, (0, 0))
     draw = ImageDraw.Draw(canvas)
-    draw.text((view.width / 2, view.height + 12), "NO PLATE BOX FOUND", font=font,
-              fill=(200, 0, 0), anchor="mt")
-    draw.text((view.width / 2, view.height + 12 + max(16, view.width // 32) + 8),
-              "Nothing read (whole-frame reading is off)", font=_latin_font(max(14, view.width // 40)),
-              fill=(200, 0, 0), anchor="mt")
+    draw.text(
+        (view.width / 2, view.height + 12),
+        "NO PLATE BOX FOUND",
+        font=font,
+        fill=(200, 0, 0),
+        anchor="mt",
+    )
+    draw.text(
+        (view.width / 2, view.height + 12 + max(16, view.width // 32) + 8),
+        "Nothing read (whole-frame reading is off)",
+        font=_latin_font(max(14, view.width // 40)),
+        fill=(200, 0, 0),
+        anchor="mt",
+    )
     return canvas
