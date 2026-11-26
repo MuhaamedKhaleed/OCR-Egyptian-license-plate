@@ -1,0 +1,256 @@
+"""Explicit local-weight inference. Importing this module does not load a model."""
+
+from pathlib import Path
+from typing import Any
+
+from .core import ARABIC_MAPPING, Detection, decode_characters
+
+
+def _overlap(first: list[float], second: list[float]) -> float:
+    """Intersection over union for two xyxy character boxes."""
+    x1, y1 = max(first[0], second[0]), max(first[1], second[1])
+    x2, y2 = min(first[2], second[2]), min(first[3], second[3])
+    intersection = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+    area = max(0.0, first[2] - first[0]) * max(0.0, first[3] - first[1])
+    area += max(0.0, second[2] - second[0]) * max(0.0, second[3] - second[1])
+    union = area - intersection
+    return intersection / union if union > 0 else 0.0
+
+
+def _containment(first: list[float], second: list[float]) -> float:
+    """Share of the smaller box covered by the intersection of two xyxy boxes."""
+    x1, y1 = max(first[0], second[0]), max(first[1], second[1])
+    x2, y2 = min(first[2], second[2]), min(first[3], second[3])
+    intersection = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+    first_area = max(0.0, first[2] - first[0]) * max(0.0, first[3] - first[1])
+    second_area = max(0.0, second[2] - second[0]) * max(0.0, second[3] - second[1])
+    smaller = min(first_area, second_area)
+    return intersection / smaller if smaller > 0 else 0.0
+
+
+def _unique_candidates(
+    candidates: list[tuple[str, list[float], float]],
+) -> list[tuple[str, list[float], float]]:
+    """Keep the stronger character when detections duplicate one glyph.
+
+    The high IoU threshold removes near-identical boxes. Nested same-label boxes
+    (one box covering at least 0.8 of the other) are also reduced, which handles
+    a stronger detection firing twice on one character at different scales.
+    Different labels on the same glyph are kept: resolving those by confidence
+    alone was observed to pick the wrong class, so they stay visible as model
+    errors. It does not merge adjacent letters, normalize Arabic spelling or
+    group multiple plates.
+    """
+    kept: list[tuple[str, list[float], float]] = []
+    for candidate in sorted(candidates, key=lambda item: item[2], reverse=True):
+        duplicate = any(
+            _overlap(candidate[1], other[1]) >= 0.8
+            or (candidate[0] == other[0] and _containment(candidate[1], other[1]) >= 0.8)
+            for other in kept
+        )
+        if not duplicate:
+            kept.append(candidate)
+    return kept
+
+
+def _unique_characters(candidates: list[tuple[str, list[float], float]]) -> list[Detection]:
+    """Like _unique_candidates, reduced to label and horizontal center for decoding."""
+    return [
+        Detection(label, (coords[0] + coords[2]) / 2)
+        for label, coords, _ in _unique_candidates(candidates)
+    ]
+
+
+def predict_plate(
+    image: Path, weights: Path, confidence: float = 0.2, *, model_factory: Any = None
+) -> dict[str, str]:
+    """Predict on the requested image, never reuse a previous image's result.
+
+    model_factory exists for offline unit testing. Real inference requires the
+    optional Ultralytics dependency and compatible, trusted local model weights.
+    """
+    if not 0 <= confidence <= 1:
+        raise ValueError("Confidence must be between 0 and 1.")
+    if not image.is_file():
+        raise ValueError(f"Image not found: {image}. Supply an existing image file.")
+    if not weights.is_file():
+        raise ValueError(f"Weights not found: {weights}. Supply trusted local trained weights.")
+    if model_factory is None:
+        try:
+            from ultralytics import YOLO
+        except ImportError as exc:
+            raise ValueError('Install the inference extra: pip install -e ".[inference]"') from exc
+        model_factory = YOLO
+    model = model_factory(str(weights.resolve()))
+    results = model.predict(source=str(image.resolve()), conf=confidence, verbose=False)
+    if not results:
+        return {"letters": "", "numbers": ""}
+    result = results[0]
+    candidates = []
+    for box in result.boxes:
+        class_id = int(box.cls.item())
+        names = result.names
+        label = names.get(class_id, "") if isinstance(names, dict) else names[class_id]
+        if label not in ARABIC_MAPPING:
+            continue
+        coords = [float(value) for value in box.xyxy[0].tolist()]
+        candidates.append((label, coords, float(box.conf.item())))
+    return decode_characters(_unique_characters(candidates))
+
+
+def predict_plates(
+    image: Path,
+    weights: Path,
+    confidence: float = 0.2,
+    *,
+    model_factory: Any = None,
+    detector_label: str = "License Plate",
+    localize_only: bool = False,
+    include_boxes: bool = False,
+    tta: bool = False,
+    char_source: str = "crop",
+    on_no_plate: str = "empty",
+) -> list[dict[str, Any]]:
+    """Localize plates, then decode each crop independently.
+
+    Returns no entries when no plate is detected. It never mixes characters
+    across plates or silently falls back to whole-frame decoding.
+    detector_label names the plate class in the supplied weights, so a
+    localization-only public model (for example class "license_plate") can
+    find plates. localize_only returns boxes without character decoding, for
+    weights that carry no character classes.
+    include_boxes adds a "characters" list per plate: the model's own detection for
+    each kept character (read glyph, class label, confidence, and its xyxy box in
+    the coordinates of the "box" crop, so add box[0] and box[1] for full-image
+    pixels). Boxes come straight from the model; nothing is estimated or drawn.
+    char_source picks where the characters come from. "crop" (default, the
+    original behaviour) re-runs the model on each plate crop. "frame" reuses the
+    character detections of the single full-frame pass and keeps those whose box
+    center lies inside the plate box. Use "frame" for weights trained on whole
+    images, where a re-run on a tight crop shows characters at a scale the model
+    never saw (measured on a small real-data run: exact text on 29 of 32 images
+    with whole-frame characters, 4 of 32 with the crop re-run).
+    on_no_plate decides what happens when the detector finds no plate box.
+    "empty" (default, original) returns []. "report" returns one entry with
+    plate_found false and no text, so the miss is visible. "whole_frame" returns
+    one marked entry (plate_found false, fallback "whole_frame") whose text comes
+    from the whole-frame pass; it can include characters outside any plate.
+    """
+    if char_source not in {"crop", "frame"}:
+        raise ValueError('char_source must be "crop" or "frame".')
+    if on_no_plate not in {"empty", "report", "whole_frame"}:
+        raise ValueError('on_no_plate must be "empty", "report" or "whole_frame".')
+    if char_source == "frame" and tta:
+        raise ValueError('tta needs char_source="crop" (it augments the crop pass).')
+    if not 0 <= confidence <= 1:
+        raise ValueError("Confidence must be between 0 and 1.")
+    if include_boxes and localize_only:
+        raise ValueError("include_boxes cannot be combined with localize_only.")
+    if tta and localize_only:
+        raise ValueError("tta cannot be combined with localize_only.")
+    if not image.is_file() or not weights.is_file():
+        raise ValueError("Image and trusted weights must both be existing files.")
+    if model_factory is None:
+        try:
+            from ultralytics import YOLO
+        except ImportError as exc:
+            raise ValueError('Install the inference extra: pip install -e ".[inference]"') from exc
+        model_factory = YOLO
+    model = model_factory(str(weights.resolve()))
+    frames = model.predict(source=str(image.resolve()), conf=confidence, verbose=False)
+    if not frames:
+        return []
+    frame = frames[0]
+    height, width = frame.orig_img.shape[:2]
+    output = []
+    frame_chars: list[tuple[str, list[float], float]] = []
+    if (char_source == "frame" or on_no_plate == "whole_frame") and not localize_only:
+        for char in frame.boxes:
+            label = frame.names[int(char.cls.item())]
+            if label in ARABIC_MAPPING:
+                frame_chars.append(
+                    (label, [float(v) for v in char.xyxy[0].tolist()], float(char.conf.item()))
+                )
+    plate_seen = False
+    for box in frame.boxes:
+        if frame.names[int(box.cls.item())] != detector_label:
+            continue
+        plate_seen = True
+        x1, y1, x2, y2 = [float(v) for v in box.xyxy[0].tolist()]
+        bounds = [
+            max(0, int(x1) - 3),
+            max(0, int(y1) - 3),
+            min(width, int(x2) + 4),
+            min(height, int(y2) + 4),
+        ]
+        left, top, right, bottom = bounds
+        if right <= left or bottom <= top:
+            continue
+        if localize_only:
+            output.append({"box": bounds, "confidence": float(box.conf.item())})
+            continue
+        candidates = []
+        if char_source == "frame":
+            for lab, xy, conf in frame_chars:
+                center_x, center_y = (xy[0] + xy[2]) / 2, (xy[1] + xy[3]) / 2
+                if left <= center_x <= right and top <= center_y <= bottom:
+                    shifted = [xy[0] - left, xy[1] - top, xy[2] - left, xy[3] - top]
+                    candidates.append((lab, shifted, conf))
+            results = []
+        else:
+            crop = frame.orig_img[top:bottom, left:right]
+            predict_kwargs: dict[str, Any] = {"augment": True} if tta else {}
+            results = model.predict(source=crop, conf=confidence, verbose=False, **predict_kwargs)
+        if results:
+            result = results[0]
+            for char in result.boxes:
+                label = result.names[int(char.cls.item())]
+                if label in ARABIC_MAPPING:
+                    coords = [float(v) for v in char.xyxy[0].tolist()]
+                    candidates.append((label, coords, float(char.conf.item())))
+        kept = _unique_candidates(candidates)
+        entry: dict[str, Any] = {
+            "box": bounds,
+            "confidence": float(box.conf.item()),
+            **decode_characters([Detection(lab, (xy[0] + xy[2]) / 2) for lab, xy, _ in kept]),
+        }
+        if include_boxes:
+            entry["characters"] = [
+                {
+                    "char": ARABIC_MAPPING[lab],
+                    "label": lab,
+                    "confidence": conf,
+                    "box": xy,
+                }
+                for lab, xy, conf in sorted(kept, key=lambda item: -(item[1][0] + item[1][2]))
+            ]
+        output.append(entry)
+    if output or plate_seen or localize_only or on_no_plate == "empty":
+        return output
+    note = "no plate box detected"
+    if on_no_plate == "report":
+        return [
+            {
+                "plate_found": False,
+                "box": None,
+                "confidence": 0.0,
+                "letters": "",
+                "numbers": "",
+                "note": note + "; nothing read. Whole-frame reading is off.",
+            }
+        ]
+    kept = _unique_candidates(frame_chars)
+    entry = {
+        "plate_found": False,
+        "fallback": "whole_frame",
+        "box": [0, 0, width, height],
+        "confidence": 0.0,
+        "note": note + "; characters read from the whole frame and may include text outside a plate.",
+        **decode_characters([Detection(lab, (xy[0] + xy[2]) / 2) for lab, xy, _ in kept]),
+    }
+    if include_boxes:
+        entry["characters"] = [
+            {"char": ARABIC_MAPPING[lab], "label": lab, "confidence": conf, "box": xy}
+            for lab, xy, conf in sorted(kept, key=lambda item: -(item[1][0] + item[1][2]))
+        ]
+    return [entry]
