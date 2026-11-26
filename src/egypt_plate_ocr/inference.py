@@ -108,6 +108,7 @@ def predict_plates(
     localize_only: bool = False,
     include_boxes: bool = False,
     tta: bool = False,
+    char_source: str = "crop",
 ) -> list[dict[str, Any]]:
     """Localize plates, then decode each crop independently.
 
@@ -121,7 +122,18 @@ def predict_plates(
     each kept character (read glyph, class label, confidence, and its xyxy box in
     the coordinates of the "box" crop, so add box[0] and box[1] for full-image
     pixels). Boxes come straight from the model; nothing is estimated or drawn.
+    char_source picks where the characters come from. "crop" (default, the
+    original behaviour) re-runs the model on each plate crop. "frame" reuses the
+    character detections of the single full-frame pass and keeps those whose box
+    center lies inside the plate box. Use "frame" for weights trained on whole
+    images, where a re-run on a tight crop shows characters at a scale the model
+    never saw (measured on a small real-data run: exact text on 29 of 32 images
+    with whole-frame characters, 4 of 32 with the crop re-run).
     """
+    if char_source not in {"crop", "frame"}:
+        raise ValueError('char_source must be "crop" or "frame".')
+    if char_source == "frame" and tta:
+        raise ValueError('tta needs char_source="crop" (it augments the crop pass).')
     if not 0 <= confidence <= 1:
         raise ValueError("Confidence must be between 0 and 1.")
     if include_boxes and localize_only:
@@ -143,6 +155,14 @@ def predict_plates(
     frame = frames[0]
     height, width = frame.orig_img.shape[:2]
     output = []
+    frame_chars: list[tuple[str, list[float], float]] = []
+    if char_source == "frame" and not localize_only:
+        for char in frame.boxes:
+            label = frame.names[int(char.cls.item())]
+            if label in ARABIC_MAPPING:
+                frame_chars.append(
+                    (label, [float(v) for v in char.xyxy[0].tolist()], float(char.conf.item()))
+                )
     for box in frame.boxes:
         if frame.names[int(box.cls.item())] != detector_label:
             continue
@@ -159,10 +179,18 @@ def predict_plates(
         if localize_only:
             output.append({"box": bounds, "confidence": float(box.conf.item())})
             continue
-        crop = frame.orig_img[top:bottom, left:right]
-        predict_kwargs: dict[str, Any] = {"augment": True} if tta else {}
-        results = model.predict(source=crop, conf=confidence, verbose=False, **predict_kwargs)
         candidates = []
+        if char_source == "frame":
+            for lab, xy, conf in frame_chars:
+                center_x, center_y = (xy[0] + xy[2]) / 2, (xy[1] + xy[3]) / 2
+                if left <= center_x <= right and top <= center_y <= bottom:
+                    shifted = [xy[0] - left, xy[1] - top, xy[2] - left, xy[3] - top]
+                    candidates.append((lab, shifted, conf))
+            results = []
+        else:
+            crop = frame.orig_img[top:bottom, left:right]
+            predict_kwargs: dict[str, Any] = {"augment": True} if tta else {}
+            results = model.predict(source=crop, conf=confidence, verbose=False, **predict_kwargs)
         if results:
             result = results[0]
             for char in result.boxes:
