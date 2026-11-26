@@ -80,7 +80,9 @@ egypt-plate-ocr --image path/to/car.jpg --weights path/to/best.pt --confidence 0
 
 Auto-crop mode detects `License Plate` boxes, adds a fixed small margin, and predicts each crop independently. It returns a JSON list with `box` (pixel xyxy), detector `confidence`, `letters` and `numbers` for each plate. No detected plate returns `[]`, with no full-frame fallback. Every detected plate is returned, including possible false positives. Confidence is the plate detector score, not a probability that its text is correct.
 
-Optional `--char-source frame` reads characters from the same full-frame pass (those whose box center lies inside each plate box) instead of re-running the model on each crop. The default stays `crop`, so existing behaviour is unchanged. For weights trained on whole 640x640 images, a small controlled test on training images read 29 of 32 plates exactly with whole-frame characters and 4 of 32 with the crop re-run (see `docs/kaggle-real-data-verification.md`). That test used training images only and says nothing about held-out reading.
+Which mode to use depends on the input. For full vehicle photos use `--auto-crop`. For images that are already plate crops (no `License Plate` box to find) skip `--auto-crop` and read the whole image: `--auto-crop` returns `[]` there. On the 408-image test split with a 15-epoch full-train nano model, direct reading got 119 of 238 plate-crop-style images exactly right while `--auto-crop` got 3, and `--auto-crop` got 126 of 170 vehicle photos while direct got 45 (see `docs/kaggle-real-data-verification.md`; valid and test overlap the training photos, so treat these as in-sample-leaning).
+
+An optional `--char-source frame` exists (characters from the full-frame pass instead of a re-run on the crop). The default stays `crop`. It was measured as worse than `crop` (64 vs 126 of 170) and is not recommended.
 
 ## Configuration and portable notebook
 
